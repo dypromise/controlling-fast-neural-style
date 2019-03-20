@@ -1,45 +1,44 @@
-require 'torch'
-require 'nn'
-require 'image'
-require 'camera'
+require "torch"
+require "nn"
+require "image"
+require "camera"
 
-require 'qt'
-require 'qttorch'
-require 'qtwidget'
+require "qt"
+require "qttorch"
+require "qtwidget"
 
-require 'fast_neural_style.ShaveImage'
-require 'fast_neural_style.TotalVariation'
-require 'fast_neural_style.InstanceNormalization'
-local utils = require 'fast_neural_style.utils'
-local preprocess = require 'fast_neural_style.preprocess'
-
+require "fast_neural_style.ShaveImage"
+require "fast_neural_style.TotalVariation"
+require "fast_neural_style.InstanceNormalization"
+local utils = require "fast_neural_style.utils"
+local preprocess = require "fast_neural_style.preprocess"
 
 local cmd = torch.CmdLine()
 
 -- Model options
-cmd:option('-models', 'models/instance_norm/candy.t7')
-cmd:option('-height', 480)
-cmd:option('-width', 640)
+cmd:option("-models", "models/instance_norm/candy.t7")
+cmd:option("-height", 480)
+cmd:option("-width", 640)
 
 -- GPU options
-cmd:option('-gpu', -1)
-cmd:option('-backend', 'cuda')
-cmd:option('-use_cudnn', 1)
+cmd:option("-gpu", -1)
+cmd:option("-backend", "cuda")
+cmd:option("-use_cudnn", 1)
 
 -- Webcam options
-cmd:option('-webcam_idx', 0)
-cmd:option('-webcam_fps', 60)
-
+cmd:option("-webcam_idx", 0)
+cmd:option("-webcam_fps", 60)
 
 local function main()
   local opt = cmd:parse(arg)
 
-  local dtype, use_cudnn = utils.setup_gpu(opt.gpu, opt.backend, opt.use_cudnn == 1)
+  local dtype,
+    use_cudnn = utils.setup_gpu(opt.gpu, opt.backend, opt.use_cudnn == 1)
   local models = {}
 
   local preprocess_method = nil
-  for _, checkpoint_path in ipairs(opt.models:split(',')) do
-    print('loading model from ', checkpoint_path)
+  for _, checkpoint_path in ipairs(opt.models:split(",")) do
+    print("loading model from ", checkpoint_path)
     local checkpoint = torch.load(checkpoint_path)
     local model = checkpoint.model
     model:evaluate()
@@ -48,14 +47,14 @@ local function main()
       cudnn.convert(model, cudnn)
     end
     table.insert(models, model)
-    local this_preprocess_method = checkpoint.opt.preprocessing or 'vgg'
+    local this_preprocess_method = checkpoint.opt.preprocessing or "vgg"
     if not preprocess_method then
-      print('got here')
+      print("got here")
       preprocess_method = this_preprocess_method
       print(preprocess_method)
     else
       if this_preprocess_method ~= preprocess_method then
-        error('All models must use the same preprocessing')
+        error("All models must use the same preprocessing")
       end
     end
   end
@@ -66,7 +65,7 @@ local function main()
     idx = opt.webcam_idx,
     fps = opt.webcam_fps,
     height = opt.height,
-    width = opt.width,
+    width = opt.width
   }
   local cam = image.Camera(camera_opt)
 
@@ -76,7 +75,8 @@ local function main()
     local img = cam:forward()
 
     -- Preprocess the frame
-    local H, W = img:size(2), img:size(3)
+    local H,
+      W = img:size(2), img:size(3)
     img = img:view(1, 3, H, W)
     local img_pre = preprocess.preprocess(img):type(dtype)
 
@@ -89,13 +89,13 @@ local function main()
       local img_out = preprocess.deprocess(img_out_pre)[1]:float()
       table.insert(imgs_out, img_out)
     end
-    local img_disp = image.toDisplayTensor{
+    local img_disp =
+      image.toDisplayTensor {
       input = imgs_out,
       min = 0,
       max = 1,
-      nrow = math.floor(math.sqrt(#imgs_out)),
+      nrow = math.floor(math.sqrt(#imgs_out))
     }
-
 
     if not win then
       -- On the first call use image.display to construct a window
@@ -110,6 +110,4 @@ local function main()
   end
 end
 
-
 main()
-
