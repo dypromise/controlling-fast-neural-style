@@ -10,9 +10,7 @@ function DataLoader:__init(opt)
   assert(opt.h5_file, "Must provide h5_file")
   assert(opt.batch_size, "Must provide batch size")
   self.preprocess_fn = preprocess[opt.preprocessing].preprocess
-
   self.task = opt.task
-
   self.h5_file = hdf5.open(opt.h5_file, "r")
   self.batch_size = opt.batch_size
 

@@ -11,6 +11,11 @@ local utils = require "fast_neural_style.utils"
 local preprocess = require "fast_neural_style.preprocess"
 local models = require "fast_neural_style.models"
 
+use_display, display = pcall(require, "display")
+if not use_display then
+  print("torch.display not found. unable to plot")
+end
+
 local cmd = torch.CmdLine()
 
 --[[
@@ -71,8 +76,16 @@ cmd:option("-backend", "cuda", "cuda|opencl")
 cmd:option("-proto_file", "models/trained/vgg19/VGG_ILSVRC_19_layers_deploy.prototxt", "Pretrained")
 cmd:option("-model_file", "models/trained/vgg19/VGG_ILSVRC_19_layers.caffemodel")
 
+-- Display
+cmd:option("-display_port", 8000, "specify port to show graphs")
+
 function main()
   local opt = cmd:parse(arg)
+
+  -- Config display port
+  if use_display then
+    display.configure({port = opt.display_port})
+  end
 
   -- Parse layer strings and weights
   opt.content_layers, opt.content_weights = utils.parse_layers(opt.content_layers, opt.content_weights)
@@ -99,7 +112,9 @@ function main()
     n_guides = style_image_guides:size(1)
   end
 
+  ---------------------------------------
   -- Build the model
+  ---------------------------------------
   local model = nil
   if opt.resume_from_checkpoint ~= "" then
     print("Loading checkpoint from " .. opt.resume_from_checkpoint)
@@ -175,12 +190,16 @@ function main()
     end
   end
 
+  ---------------------------------------
+  -- Eval function
+  ---------------------------------------
   local function f(x)
     assert(x == params)
     grad_params:zero()
 
     local x, y = loader:getBatch("train")
     x, y = x:type(dtype), y:type(dtype)
+    target_for_display = preprocess.deprocess(y)
 
     -- Define fixed mask as training guides
     local image_guides = nil
@@ -259,10 +278,12 @@ function main()
 
     -- Add regularization
     -- grad_params:add(opt.weight_decay, params)
-
     return loss, grad_params
   end
 
+  ---------------------------------------
+  -- Optimization
+  ---------------------------------------
   local optim_state = {learningRate = opt.learning_rate}
   local train_loss_history = {}
   local val_loss_history = {}
@@ -277,15 +298,13 @@ function main()
       style_loss_history[string.format("content-%d", k)] = {}
     end
   end
-
   local style_weight = opt.style_weight
+
   for t = 1, opt.num_iterations do
+    -- Backpropogation
     local epoch = t / loader.num_minibatches["train"]
-
     local _, loss = optim.adam(f, params, optim_state)
-
-    table.insert(train_loss_history, loss[1])
-
+    table.insert(train_loss_history, {t, loss[1]})
     if opt.task == "style" then
       for i, k in ipairs(opt.style_layers) do
         table.insert(style_loss_history[string.format("style-%d", k)], percep_crit.style_losses[i])
@@ -300,6 +319,23 @@ function main()
       optim_state.learningRate
     )
 
+    -- Visualize
+    if t % 50 == 0 then
+      collectgarbage()
+      local output = model.output:double()
+      local imgs = {}
+      local output = preprocess.deprocess(output)
+      for i = 1, output:size(1) do
+        table.insert(imgs, torch.clamp(output[i], 0, 1))
+      end
+      if use_display then
+        display.image(target_for_display, {win = 1, width = 512, title = "Target"})
+        display.image(imgs, {win = 0, width = 512, title = "Output"})
+        display.plot(train_loss_history, {win = 2, labels = {"iteration", "Loss"}})
+      end
+    end
+
+    -- Save checkpoint
     if t % opt.checkpoint_every == 0 then
       -- Check loss on the validation set
       loader:reset("val")
