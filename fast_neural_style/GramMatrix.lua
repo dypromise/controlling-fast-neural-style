@@ -3,7 +3,6 @@ require 'nn'
 
 local Gram, parent = torch.class('nn.GramMatrix', 'nn.Module')
 
-
 --[[
 A layer to compute the Gram Matrix of inputs.
 
@@ -14,14 +13,11 @@ Input:
 Output:
 - gram: A tensor of shape (N, C, C) or (C, C) giving Gram matrix for input.
 --]]
-
-
 function Gram:__init(normalize)
   parent.__init(self)
   self.normalize = normalize or true
   self.buffer = torch.Tensor()
 end
-
 
 function Gram:updateOutput(input)
   local C, H, W
@@ -44,7 +40,6 @@ function Gram:updateOutput(input)
   end
   return self.output
 end
-
 
 function Gram:updateGradInput(input, gradOutput)
   self.gradInput:resizeAs(input):zero()
@@ -71,4 +66,3 @@ function Gram:updateGradInput(input, gradOutput)
   assert(self.gradInput:isContiguous())
   return self.gradInput
 end
-

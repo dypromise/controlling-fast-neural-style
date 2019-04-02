@@ -12,7 +12,6 @@ Convert model checkpoints to CPU-only .t7 checkpoints.
 Input can be a caffe model (prototxt and caffemodel) in which case it will be
 loaded using loadcaffe; input can also be a .t7 file with cudnn or CUDA layers.
 ]]
-
 local cmd = torch.CmdLine()
 cmd:option('-input_t7', '')
 cmd:option('-input_prototxt', '')
@@ -48,6 +47,5 @@ local function main()
   print('Saving network to ' .. opt.output_t7)
   torch.save(opt.output_t7, net)
 end
-
 
 main()

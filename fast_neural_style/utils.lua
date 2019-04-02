@@ -2,9 +2,7 @@ require 'torch'
 require 'nn'
 local cjson = require 'cjson'
 
-
 local M = {}
-
 
 -- Parse a string of comma-separated numbers
 -- For example convert "1.0,3.14" to {1.0, 3.14}
@@ -15,7 +13,6 @@ function M.parse_num_list(s)
   end
   return nums
 end
-
 
 -- Parse a layer string and associated weights string.
 -- The layers string is a string of comma-separated layer strings, and the
@@ -38,7 +35,6 @@ function M.parse_layers(layers_string, weights_string)
   end
   return layers, weights
 end
-
 
 function M.setup_gpu(gpu, backend, use_cudnn)
   local dtype = 'torch.FloatTensor'
@@ -65,7 +61,6 @@ function M.setup_gpu(gpu, backend, use_cudnn)
   return dtype, use_cudnn
 end
 
-
 function M.clear_gradients(m)
   if torch.isTypeOf(m, nn.Container) then
     m:applyToModules(M.clear_gradients)
@@ -77,7 +72,6 @@ function M.clear_gradients(m)
     m.gradBias = m.gradBias.new()
   end
 end
-
 
 function M.restore_gradients(m)
   if torch.isTypeOf(m, nn.Container) then
@@ -91,7 +85,6 @@ function M.restore_gradients(m)
   end
 end
 
-
 function M.read_json(path)
   local file = io.open(path, 'r')
   local text = file:read()
@@ -99,7 +92,6 @@ function M.read_json(path)
   local info = cjson.decode(text)
   return info
 end
-
 
 function M.write_json(path, j)
   cjson.encode_sparse_array(true, 2, 10)
@@ -125,7 +117,6 @@ function M.is_image_file(filename)
   return false
 end
 
-
 function M.median_filter(img, r)
   local u = img:unfold(2, r, 1):contiguous()
   u = u:unfold(3, r, 1):contiguous()
@@ -136,6 +127,4 @@ function M.median_filter(img, r)
   return med[{{}, {}, {}, 1}]
 end
 
-
 return M
-

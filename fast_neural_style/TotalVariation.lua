@@ -1,6 +1,5 @@
 local TVLoss, parent = torch.class('nn.TotalVariation', 'nn.Module')
 
-
 function TVLoss:__init(strength)
   parent.__init(self)
   self.strength = strength
@@ -8,12 +7,10 @@ function TVLoss:__init(strength)
   self.y_diff = torch.Tensor()
 end
 
-
 function TVLoss:updateOutput(input)
   self.output = input
   return self.output
 end
-
 
 -- TV loss backward pass inspired by kaishengtai/neuralart
 function TVLoss:updateGradInput(input, gradOutput)
@@ -33,4 +30,3 @@ function TVLoss:updateGradInput(input, gradOutput)
   self.gradInput:add(gradOutput)
   return self.gradInput
 end
-

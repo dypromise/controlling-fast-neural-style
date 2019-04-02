@@ -1,15 +1,14 @@
-require "torch"
-require "nn"
+require 'torch'
+require 'nn'
 
-require "fast_neural_style.ContentLoss"
-require "fast_neural_style.StyleLoss"
-require "fast_neural_style.StyleLossGuided"
-require "fast_neural_style.DeepDreamLoss"
+require 'fast_neural_style.ContentLoss'
+require 'fast_neural_style.StyleLoss'
+require 'fast_neural_style.StyleLossGuided'
+require 'fast_neural_style.DeepDreamLoss'
 
-local layer_utils = require "fast_neural_style.layer_utils"
+local layer_utils = require 'fast_neural_style.layer_utils'
 
-local crit,
-  parent = torch.class("nn.PerceptualCriterion", "nn.Criterion")
+local crit, parent = torch.class('nn.PerceptualCriterion', 'nn.Criterion')
 
 --[[
 Input: args is a table with the following keys:
@@ -52,7 +51,7 @@ function crit:__init(args)
   end
 
   -- Set up style loss layers
-  if args.agg_type == "guided_gram" then
+  if args.agg_type == 'guided_gram' then
     local guided_net = nn.Sequential()
     local parallel = nn.ParallelTable()
     local img_path = nn.Sequential()
@@ -64,15 +63,16 @@ function crit:__init(args)
         local layer = self.net:get(i)
         local layer_type = torch.type(layer)
         img_path:add(layer)
-        if layer_type == "nn.SpatialMaxPooling" then
+        if layer_type == 'nn.SpatialMaxPooling' then
           -- use average pooling for downsampling of mask
-          local kW,
-            kH,
-            dW,
-            dH,
-            padW,
-            padH,
-            ceil_mode = layer.kW, layer.kH, layer.dW, layer.dH, layer.padW, layer.padH, layer.ceil_mode
+          local kW, kH, dW, dH, padW, padH, ceil_mode =
+            layer.kW,
+            layer.kH,
+            layer.dW,
+            layer.dH,
+            layer.padW,
+            layer.padH,
+            layer.ceil_mode
           local ave_pool = nn.SpatialAveragePooling(kW, kH, dW, dH, padW, padH)
           ave_pool.ceil_mode = ceil_mode
           guide_path:add(ave_pool)
@@ -93,11 +93,12 @@ function crit:__init(args)
           end
         end
         if next_content_ndx <= #args.content_layers then
-          if layer_type == "nn.ContentLoss" then
+          if layer_type == 'nn.ContentLoss' then
             next_content_ndx = next_content_ndx + 1
             parallel:add(img_path:clone()):add(guide_path:clone())
             guided_net:add(parallel:clone())
-            guided_net.modules[#guided_net].modules[1].modules[1] = layer -- hack to keep contentloss in content_loss_layers table
+            -- hack to keep contentloss in content_loss_layers table
+            guided_net.modules[#guided_net].modules[1].modules[1] = layer
             parallel = nn.ParallelTable()
             img_path = nn.Sequential()
             guide_path = nn.Sequential()
@@ -116,7 +117,7 @@ function crit:__init(args)
     end
   end
 
-  if args.agg_type ~= "guided_gram" then
+  if args.agg_type ~= 'guided_gram' then
     layer_utils.trim_network(self.net)
   end
   self.grad_net_output = torch.Tensor()
@@ -127,10 +128,10 @@ target: Tensor of shape (1, 3, H, W) giving pixels for style target image
 --]]
 function crit:setStyleTarget(target)
   for i, content_loss_layer in ipairs(self.content_loss_layers) do
-    content_loss_layer:setMode("none")
+    content_loss_layer:setMode('none')
   end
   for i, style_loss_layer in ipairs(self.style_loss_layers) do
-    style_loss_layer:setMode("capture")
+    style_loss_layer:setMode('capture')
   end
   self.net:forward(target)
 end
@@ -140,10 +141,10 @@ target: Tensor of shape (N, 3, H, W) giving pixels for content target images
 --]]
 function crit:setContentTarget(target)
   for i, style_loss_layer in ipairs(self.style_loss_layers) do
-    style_loss_layer:setMode("none")
+    style_loss_layer:setMode('none')
   end
   for i, content_loss_layer in ipairs(self.content_loss_layers) do
-    content_loss_layer:setMode("capture")
+    content_loss_layer:setMode('capture')
   end
   self.net:forward(target)
 end
@@ -178,10 +179,10 @@ function crit:updateOutput(input, target)
   -- Make sure to set all content and style loss layers to loss mode before
   -- running the image forward.
   for i, content_loss_layer in ipairs(self.content_loss_layers) do
-    content_loss_layer:setMode("loss")
+    content_loss_layer:setMode('loss')
   end
   for i, style_loss_layer in ipairs(self.style_loss_layers) do
-    style_loss_layer:setMode("loss")
+    style_loss_layer:setMode('loss')
   end
 
   local output = self.net:forward(input)

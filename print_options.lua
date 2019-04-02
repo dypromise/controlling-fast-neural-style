@@ -5,12 +5,9 @@ require 'fast_neural_style.ShaveImage'
 require 'fast_neural_style.TotalVariation'
 require 'fast_neural_style.InstanceNormalization'
 
-
 --[[
 Prints the options that were used to train a a feedforward model.
 --]]
-
-
 local cmd = torch.CmdLine()
 cmd:option('-model', 'models/instance_norm/candy.t7')
 local opt = cmd:parse(arg)
@@ -24,4 +21,3 @@ for k, v in pairs(checkpoint.opt) do
   end
   print(string.format('%s: %s', k, v))
 end
-

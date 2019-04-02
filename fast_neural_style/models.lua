@@ -3,9 +3,7 @@ require 'fast_neural_style.ShaveImage'
 require 'fast_neural_style.TotalVariation'
 require 'fast_neural_style.InstanceNormalization'
 
-
 local M = {}
-
 
 local function build_conv_block(dim, padding_type, use_instance_norm)
   local conv_block = nn.Sequential()
@@ -38,7 +36,6 @@ local function build_conv_block(dim, padding_type, use_instance_norm)
   return conv_block
 end
 
-
 local function build_res_block(dim, padding_type, use_instance_norm)
   local conv_block = build_conv_block(dim, padding_type, use_instance_norm)
   local res_block = nn.Sequential()
@@ -53,17 +50,17 @@ local function build_res_block(dim, padding_type, use_instance_norm)
   return res_block
 end
 
-
 function M.build_model(opt, n_channels)
   local arch = opt.arch:split(',')
   local prev_dim = n_channels
   local model = nn.Sequential()
-  
+
   for i, v in ipairs(arch) do
     local first_char = string.sub(v, 1, 1)
     local layer, next_dim
     local needs_relu = true
     local needs_bn = true
+
     if first_char == 'c' then
       -- Convolution
       local f = tonumber(string.sub(v, 2, 2)) -- filter size
@@ -87,8 +84,7 @@ function M.build_model(opt, n_channels)
       local s = tonumber(string.sub(v, 4, 4)) -- stride
       local a = s - 1 -- adjustment
       next_dim = tonumber(string.sub(v, 6))
-      layer = nn.SpatialFullConvolution(prev_dim, next_dim,
-                                        f, f, s, s, p, p, a, a)
+      layer = nn.SpatialFullConvolution(prev_dim, next_dim, f, f, s, s, p, p, a, a)
     elseif first_char == 'd' then
       -- Downsampling (strided convolution)
       next_dim = tonumber(string.sub(v, 2))
@@ -115,11 +111,14 @@ function M.build_model(opt, n_channels)
       needs_bn = false
       needs_relu = false
     end
+
     model:add(layer)
+
     if i == #arch then
       needs_relu = false
       needs_bn = false
     end
+
     if needs_bn then
       if opt.use_instance_norm == 1 then
         model:add(nn.InstanceNormalization(next_dim))
@@ -127,20 +126,17 @@ function M.build_model(opt, n_channels)
         model:add(nn.SpatialBatchNormalization(next_dim))
       end
     end
+
     if needs_relu then
       model:add(nn.ReLU(true))
     end
-
     prev_dim = next_dim
   end
 
   model:add(nn.Tanh())
   model:add(nn.MulConstant(opt.tanh_constant))
   model:add(nn.TotalVariation(opt.tv_strength))
-
   return model
 end
 
-
 return M
-

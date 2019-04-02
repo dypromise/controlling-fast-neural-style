@@ -3,7 +3,6 @@ require 'nn'
 
 local ContentLoss, parent = torch.class('nn.ContentLoss', 'nn.Module')
 
-
 --[[
 Module to compute content loss in-place.
 
@@ -17,7 +16,6 @@ behave as follows:
   pass, add compute the gradient of self.loss with respect to the inputs, and
   add this value to the upstream gradOutput to produce gradInput.
 --]]
-
 function ContentLoss:__init(strength, loss_type)
   parent.__init(self)
   self.strength = strength or 1.0
@@ -35,7 +33,6 @@ function ContentLoss:__init(strength, loss_type)
   end
 end
 
-
 function ContentLoss:updateOutput(input)
   if self.mode == 'capture' then
     self.target:resizeAs(input):copy(input)
@@ -45,7 +42,6 @@ function ContentLoss:updateOutput(input)
   self.output = input
   return self.output
 end
-
 
 function ContentLoss:updateGradInput(input, gradOutput)
   if self.mode == 'capture' or self.mode == 'none' then
@@ -57,7 +53,6 @@ function ContentLoss:updateGradInput(input, gradOutput)
   end
   return self.gradInput
 end
-
 
 function ContentLoss:setMode(mode)
   if mode ~= 'capture' and mode ~= 'loss' and mode ~= 'none' then

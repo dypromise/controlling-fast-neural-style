@@ -5,7 +5,6 @@ require 'fast_neural_style.GramMatrix'
 
 local StyleLoss, parent = torch.class('nn.StyleLoss', 'nn.Module')
 
-
 function StyleLoss:__init(strength, loss_type, agg_type)
   parent.__init(self)
   self.agg_type = agg_type or 'gram'
@@ -23,7 +22,7 @@ function StyleLoss:__init(strength, loss_type, agg_type)
     error('Unsupported aggregation type ' .. agg_type)
   end
   self.agg_out = nil
-  
+
   self.mode = 'none'
   loss_type = loss_type or 'L2'
   if loss_type == 'L2' then
@@ -34,7 +33,6 @@ function StyleLoss:__init(strength, loss_type, agg_type)
     error(string.format('invalid loss type "%s"', loss_type))
   end
 end
-
 
 function StyleLoss:updateOutput(input)
   self.agg_out = self.agg:forward(input)
@@ -53,7 +51,6 @@ function StyleLoss:updateOutput(input)
   return self.output
 end
 
-
 function StyleLoss:updateGradInput(input, gradOutput)
   if self.mode == 'capture' or self.mode == 'none' then
     self.gradInput = gradOutput
@@ -65,7 +62,6 @@ function StyleLoss:updateGradInput(input, gradOutput)
   end
   return self.gradInput
 end
-
 
 function StyleLoss:setMode(mode)
   if mode ~= 'capture' and mode ~= 'loss' and mode ~= 'none' then

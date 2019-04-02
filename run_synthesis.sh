@@ -1,0 +1,2 @@
+#!/bin/bash
+time th fast_neural_style.lua -model /home/dingyang/GitHub/controlling-fast-neural-style/models/trained/candy_over_feathers_256_guidance_sw_5.0_slim.t7 -image_size 512 -median_filter 3 -input_image /home/dingyang/GitHub/controlling-fast-neural-style/images/content/afghan_girl_cropped.jpg -input_image_guides /home/dingyang/GitHub/controlling-fast-neural-style/tmp/guides.hdf5 -output_image /home/dingyang/GitHub/controlling-fast-neural-style/images/outputs/afghan_girl_cropped.jpg_candy_over_feathers_256_guidance_sw_5.0_slim_512_background,person.jpg -gpu 0 

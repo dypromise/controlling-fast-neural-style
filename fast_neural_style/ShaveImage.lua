@@ -5,7 +5,6 @@ function layer:__init(size)
   self.size = size
 end
 
-
 function layer:updateOutput(input)
   local N, C = input:size(1), input:size(2)
   local H, W = input:size(3), input:size(4)
@@ -15,7 +14,6 @@ function layer:updateOutput(input)
   return self.output
 end
 
-
 function layer:updateGradInput(input, gradOutput)
   local N, C = input:size(1), input:size(2)
   local H, W = input:size(3), input:size(4)
@@ -24,4 +22,3 @@ function layer:updateGradInput(input, gradOutput)
   self.gradInput[{{}, {}, {s + 1, H - s}, {s + 1, W - s}}]:copy(gradOutput)
   return self.gradInput
 end
-

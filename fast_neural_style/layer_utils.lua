@@ -32,7 +32,6 @@ a network without changing the layer strings of existing layers.
 --]]
 local M = {}
 
-
 --[[
 Convert a layer string to an array of integers.
 
@@ -45,7 +44,6 @@ function M.layer_string_to_nums(layer_string)
   end
   return nums
 end
-
 
 --[[
 Comparison function for layer strings that is compatible with table.sort.
@@ -67,7 +65,9 @@ function M.compare_layer_strings(s1, s2)
     elseif left[i] > right[i] then
       out = false
     end
-    if out ~= nil then break end
+    if out ~= nil then
+      break
+    end
   end
 
   if out == nil then
@@ -75,7 +75,6 @@ function M.compare_layer_strings(s1, s2)
   end
   return out
 end
-
 
 --[[
 Get a layer from the network net using a layer string.
@@ -98,9 +97,8 @@ function M.get_layer(net, layer_string)
   return layer
 end
 
-
 -- Insert a new layer immediately after the layer specified by a layer string.
--- Any layers inserted this way are flagged with a special variable 
+-- Any layers inserted this way are flagged with a special variable
 function M.insert_after(net, layer_string, new_layer)
   new_layer._ignore = true
   local nums = M.layer_string_to_nums(layer_string)
@@ -123,7 +121,6 @@ function M.insert_after(net, layer_string, new_layer)
     end
   end
 end
-
 
 -- Remove the layers of the network that occur after the last _ignore
 function M.trim_network(net)
@@ -151,6 +148,4 @@ function M.trim_network(net)
   return net
 end
 
-
 return M
-

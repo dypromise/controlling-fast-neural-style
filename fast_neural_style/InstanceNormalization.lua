@@ -10,16 +10,13 @@ require 'nn'
   This implementation is based on
   https://github.com/DmitryUlyanov/texture_nets
 ]]
-
-local InstanceNormalization, parent = torch.class('nn.InstanceNormalization',
-                                                  'nn.Module')
-
+local InstanceNormalization, parent = torch.class('nn.InstanceNormalization', 'nn.Module')
 
 function InstanceNormalization:__init(nOutput, eps)
   parent.__init(self)
 
   self.eps = eps or 1e-5
-  
+
   self.nOutput = nOutput
   self.prev_N = -1
 
@@ -28,7 +25,6 @@ function InstanceNormalization:__init(nOutput, eps)
   self.gradWeight = torch.Tensor(nOutput)
   self.gradBias = torch.Tensor(nOutput)
 end
-
 
 function InstanceNormalization:updateOutput(input)
   local N, C = input:size(1), input:size(2)
@@ -52,7 +48,6 @@ function InstanceNormalization:updateOutput(input)
   return self.output
 end
 
-
 function InstanceNormalization:updateGradInput(input, gradOutput)
   local N, C = input:size(1), input:size(2)
   local H, W = input:size(3), input:size(4)
@@ -60,7 +55,7 @@ function InstanceNormalization:updateGradInput(input, gradOutput)
 
   local input_view = input:view(1, N * C, H, W)
   local gradOutput_view = gradOutput:view(1, N * C, H, W)
-  
+
   self.bn.gradWeight:zero()
   self.bn.gradBias:zero()
 
@@ -72,10 +67,8 @@ function InstanceNormalization:updateGradInput(input, gradOutput)
   return self.gradInput
 end
 
-
 function InstanceNormalization:clearState()
-   self.output = self.output.new()
-   self.gradInput = self.gradInput.new()
-   self.bn:clearState()
+  self.output = self.output.new()
+  self.gradInput = self.gradInput.new()
+  self.bn:clearState()
 end
-
