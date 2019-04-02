@@ -1,4 +1,4 @@
-local layer, parent = torch.class('nn.ShaveImage', 'nn.Module')
+local layer, parent = torch.class("nn.ShaveImage", "nn.Module")
 
 function layer:__init(size)
   parent.__init(self)

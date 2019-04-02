@@ -1,7 +1,7 @@
-require 'torch'
-require 'nn'
+require "torch"
+require "nn"
 
-local Gram, parent = torch.class('nn.GramMatrix', 'nn.Module')
+local Gram, parent = torch.class("nn.GramMatrix", "nn.Module")
 
 --[[
 A layer to compute the Gram Matrix of inputs.

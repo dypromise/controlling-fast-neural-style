@@ -1,4 +1,4 @@
-require 'nn'
+require "nn"
 
 --[[
   Implements instance normalization as described in the paper
@@ -10,7 +10,7 @@ require 'nn'
   This implementation is based on
   https://github.com/DmitryUlyanov/texture_nets
 ]]
-local InstanceNormalization, parent = torch.class('nn.InstanceNormalization', 'nn.Module')
+local InstanceNormalization, parent = torch.class("nn.InstanceNormalization", "nn.Module")
 
 function InstanceNormalization:__init(nOutput, eps)
   parent.__init(self)

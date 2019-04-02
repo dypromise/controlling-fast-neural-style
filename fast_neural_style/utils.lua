@@ -1,6 +1,6 @@
-require 'torch'
-require 'nn'
-local cjson = require 'cjson'
+require "torch"
+require "nn"
+local cjson = require "cjson"
 
 local M = {}
 
@@ -8,7 +8,7 @@ local M = {}
 -- For example convert "1.0,3.14" to {1.0, 3.14}
 function M.parse_num_list(s)
   local nums = {}
-  for _, ss in ipairs(s:split(',')) do
+  for _, ss in ipairs(s:split(",")) do
     table.insert(nums, tonumber(ss))
   end
   return nums
@@ -20,7 +20,7 @@ end
 -- contains only a single number it is duplicated to be the same length as the
 -- layers.
 function M.parse_layers(layers_string, weights_string)
-  local layers = layers_string:split(',')
+  local layers = layers_string:split(",")
   local weights = M.parse_num_list(weights_string)
   if #weights == 1 and #layers > 1 then
     -- Duplicate the same weight for all layers
@@ -37,20 +37,20 @@ function M.parse_layers(layers_string, weights_string)
 end
 
 function M.setup_gpu(gpu, backend, use_cudnn)
-  local dtype = 'torch.FloatTensor'
+  local dtype = "torch.FloatTensor"
   if gpu >= 0 then
-    if backend == 'cuda' then
-      require 'cutorch'
-      require 'cunn'
+    if backend == "cuda" then
+      require "cutorch"
+      require "cunn"
       cutorch.setDevice(gpu + 1)
-      dtype = 'torch.CudaTensor'
+      dtype = "torch.CudaTensor"
       if use_cudnn then
-        require 'cudnn'
+        require "cudnn"
         cudnn.benchmark = true
       end
-    elseif backend == 'opencl' then
-      require 'cltorch'
-      require 'clnn'
+    elseif backend == "opencl" then
+      require "cltorch"
+      require "clnn"
       cltorch.setDevice(gpu + 1)
       dtype = torch.Tensor():cl():type()
       use_cudnn = false
@@ -86,7 +86,7 @@ function M.restore_gradients(m)
 end
 
 function M.read_json(path)
-  local file = io.open(path, 'r')
+  local file = io.open(path, "r")
   local text = file:read()
   file:close()
   local info = cjson.decode(text)
@@ -96,15 +96,15 @@ end
 function M.write_json(path, j)
   cjson.encode_sparse_array(true, 2, 10)
   local text = cjson.encode(j)
-  local file = io.open(path, 'w')
+  local file = io.open(path, "w")
   file:write(text)
   file:close()
 end
 
-local IMAGE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'pgm'}
+local IMAGE_EXTS = {"jpg", "jpeg", "png", "ppm", "pgm"}
 function M.is_image_file(filename)
   -- Hidden file are not images
-  if string.sub(filename, 1, 1) == '.' then
+  if string.sub(filename, 1, 1) == "." then
     return false
   end
   -- Check against a list of known image extensions

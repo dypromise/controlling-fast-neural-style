@@ -1,12 +1,12 @@
-require 'torch'
-require 'nn'
-require 'optim'
-require 'image'
+require "torch"
+require "nn"
+require "optim"
+require "image"
 
-require 'fast_neural_style.PerceptualCriterion'
-require 'fast_neural_style.TotalVariation'
-local utils = require 'fast_neural_style.utils'
-local preprocess = require 'fast_neural_style.preprocess'
+require "fast_neural_style.PerceptualCriterion"
+require "fast_neural_style.TotalVariation"
+local utils = require "fast_neural_style.utils"
+local preprocess = require "fast_neural_style.preprocess"
 
 --[[
 Perform optimization-based style transfer as described in
@@ -14,46 +14,46 @@ Perform optimization-based style transfer as described in
 local cmd = torch.CmdLine()
 
 -- Basic options
-cmd:option('-content_image', 'images/content/chicago.jpg')
-cmd:option('-style_image', 'images/styles/starry_night.jpg')
-cmd:option('-image_size', 512)
+cmd:option("-content_image", "images/content/chicago.jpg")
+cmd:option("-style_image", "images/styles/starry_night.jpg")
+cmd:option("-image_size", 512)
 
 -- Loss options
-cmd:option('-loss_network', 'models/vgg16.t7')
-cmd:option('-tv_strength', 1e-6)
-cmd:option('-loss_type', 'L2', 'L2|SmoothL1')
-cmd:option('-style_target_type', 'gram', 'gram|mean')
+cmd:option("-loss_network", "models/vgg16.t7")
+cmd:option("-tv_strength", 1e-6)
+cmd:option("-loss_type", "L2", "L2|SmoothL1")
+cmd:option("-style_target_type", "gram", "gram|mean")
 
 -- Options for content reconstruction
-cmd:option('-content_weights', '1.0')
-cmd:option('-content_layers', '16')
+cmd:option("-content_weights", "1.0")
+cmd:option("-content_layers", "16")
 
 -- Options for style reconstruction
-cmd:option('-style_weights', '5.0')
-cmd:option('-style_layers', '4,9,16,23')
-cmd:option('-style_image_size', 512)
+cmd:option("-style_weights", "5.0")
+cmd:option("-style_layers", "4,9,16,23")
+cmd:option("-style_image_size", 512)
 
 -- Options for DeepDream
-cmd:option('-deepdream_layers', '')
-cmd:option('-deepdream_weights', '')
+cmd:option("-deepdream_layers", "")
+cmd:option("-deepdream_weights", "")
 
 -- Optimization
-cmd:option('-learning_rate', 1.0)
-cmd:option('-optimizer', 'lbfgs', 'lbfgs|adam')
-cmd:option('-num_iterations', 500)
+cmd:option("-learning_rate", 1.0)
+cmd:option("-optimizer", "lbfgs", "lbfgs|adam")
+cmd:option("-num_iterations", 500)
 
 -- Output options
-cmd:option('-output_image', 'out.png')
-cmd:option('-print_every', 1)
-cmd:option('-save_every', 50)
+cmd:option("-output_image", "out.png")
+cmd:option("-print_every", 1)
+cmd:option("-save_every", 50)
 
 -- Other options
-cmd:option('-preprocessing', 'vgg')
+cmd:option("-preprocessing", "vgg")
 
 -- Backend options
-cmd:option('-gpu', -1)
-cmd:option('-backend', 'cuda', 'cuda|opencl')
-cmd:option('-use_cudnn', 1)
+cmd:option("-gpu", -1)
+cmd:option("-backend", "cuda", "cuda|opencl")
+cmd:option("-use_cudnn", 1)
 
 local opt = cmd:parse(arg)
 
@@ -74,9 +74,9 @@ local function main()
     end
   )
   if not ok then
-    print('ERROR: Could not load loss network from ' .. opt.loss_network)
-    print('You may need to download the VGG-16 model by running:')
-    print('bash models/download_vgg16.sh')
+    print("ERROR: Could not load loss network from " .. opt.loss_network)
+    print("You may need to download the VGG-16 model by running:")
+    print("bash models/download_vgg16.sh")
     return
   end
   print(loss_net)
@@ -129,22 +129,22 @@ local function main()
     local grad_x = tv:backward(x, grad_tv_out)
 
     if opt.print_every > 0 and f_calls % opt.print_every == 0 then
-      print(string.format('Iteration %d, loss = %f', f_calls, loss))
+      print(string.format("Iteration %d, loss = %f", f_calls, loss))
     end
 
     if opt.save_every > 0 and f_calls % opt.save_every == 0 then
       local img_out = preprocess.deprocess(img:float())[1]
       local ext = paths.extname(opt.output_image)
-      local basename = paths.basename(opt.output_image):split('%.')[1]
+      local basename = paths.basename(opt.output_image):split("%.")[1]
       local directory = paths.dirname(opt.output_image)
-      local filename = string.format('%s/%s_%d.%s', directory, basename, f_calls, ext)
+      local filename = string.format("%s/%s_%d.%s", directory, basename, f_calls, ext)
       image.save(filename, img_out)
     end
 
     return loss, grad_x:view(-1)
   end
 
-  if opt.optimizer == 'lbfgs' then
+  if opt.optimizer == "lbfgs" then
     local config = {
       maxIter = opt.num_iterations,
       learningRate = opt.learning_rate,

@@ -1,4 +1,4 @@
-local TVLoss, parent = torch.class('nn.TotalVariation', 'nn.Module')
+local TVLoss, parent = torch.class("nn.TotalVariation", "nn.Module")
 
 function TVLoss:__init(strength)
   parent.__init(self)

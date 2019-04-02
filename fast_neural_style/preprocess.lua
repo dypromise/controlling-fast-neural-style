@@ -1,10 +1,10 @@
-require 'torch'
+require "torch"
 
 local M = {}
 
 local function check_input(img)
-  assert(img:dim() == 4, 'img must be N x C x H x W')
-  assert(img:size(2) == 3, 'img must have three channels')
+  assert(img:dim() == 4, "img must be N x C x H x W")
+  assert(img:size(2) == 3, "img must have three channels")
 end
 
 M.resnet = {}

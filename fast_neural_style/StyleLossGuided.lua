@@ -1,9 +1,9 @@
-require 'torch'
-require 'nn'
+require "torch"
+require "nn"
 
-require 'fast_neural_style.GramMatrixGuided'
+require "fast_neural_style.GramMatrixGuided"
 
-local StyleLossGuided, parent = torch.class('nn.StyleLossGuided', 'nn.Module')
+local StyleLossGuided, parent = torch.class("nn.StyleLossGuided", "nn.Module")
 
 function StyleLossGuided:__init(strength, loss_type)
   parent.__init(self)
@@ -13,11 +13,11 @@ function StyleLossGuided:__init(strength, loss_type)
   self.agg = {}
   self.agg_out = nil
 
-  self.mode = 'none'
-  loss_type = loss_type or 'L2'
-  if loss_type == 'L2' then
+  self.mode = "none"
+  loss_type = loss_type or "L2"
+  if loss_type == "L2" then
     self.crit = nn.MSECriterion()
-  elseif self.crit == 'SmoothL1' then
+  elseif self.crit == "SmoothL1" then
     self.crit = nn.SmoothL1Criterion()
   else
     error(string.format('invalid loss type "%s"', loss_type))
@@ -34,14 +34,14 @@ function StyleLossGuided:updateOutput(input)
   elseif guides:dim() == 4 then
     n_guides = guides:size()[2]
   end
-  if self.mode == 'capture' then
-    assert(guides:dim() == 4, 'style image and guide should have 4 dimensions')
+  if self.mode == "capture" then
+    assert(guides:dim() == 4, "style image and guide should have 4 dimensions")
     for i = 1, n_guides do
       self.agg[i] = nn.GramMatrixGuided():type(dtype)
       self.targets[i] =
         self.agg[i]:forward({features, guides[{{}, {i}, {}, {}}]:expandAs(features):contiguous()}):clone()
     end
-  elseif self.mode == 'loss' then
+  elseif self.mode == "loss" then
     self.loss = 0
     if guides:dim() == 3 then
       for i = 1, n_guides do
@@ -67,9 +67,9 @@ function StyleLossGuided:updateGradInput(input, gradOutput)
   elseif guides:dim() == 4 then
     n_guides = guides:size()[2]
   end
-  if self.mode == 'capture' or self.mode == 'none' then
+  if self.mode == "capture" or self.mode == "none" then
     self.gradInput = gradOutput
-  elseif self.mode == 'loss' then
+  elseif self.mode == "loss" then
     self.gradInput = gradOutput
     if guides:dim() == 3 then
       for i = 1, n_guides do
@@ -91,7 +91,7 @@ function StyleLossGuided:updateGradInput(input, gradOutput)
 end
 
 function StyleLossGuided:setMode(mode)
-  if mode ~= 'capture' and mode ~= 'loss' and mode ~= 'none' then
+  if mode ~= "capture" and mode ~= "loss" and mode ~= "none" then
     error(string.format('Invalid mode "%s"', mode))
   end
   self.mode = mode

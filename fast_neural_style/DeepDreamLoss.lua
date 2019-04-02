@@ -1,7 +1,7 @@
-require 'torch'
-require 'nn'
+require "torch"
+require "nn"
 
-local layer, parent = torch.class('nn.DeepDreamLoss', 'nn.Module')
+local layer, parent = torch.class("nn.DeepDreamLoss", "nn.Module")
 
 function layer:__init(strength, max_grad)
   parent.__init(self)

@@ -1,4 +1,4 @@
-require 'nn'
+require "nn"
 
 --[[
 Utility functions for getting and inserting layers into models composed of
@@ -39,7 +39,7 @@ For example layer_string_to_nums("1-23-4") = {1, 23, 4}.
 --]]
 function M.layer_string_to_nums(layer_string)
   local nums = {}
-  for _, s in ipairs(layer_string:split('-')) do
+  for _, s in ipairs(layer_string:split("-")) do
     table.insert(nums, tonumber(s))
   end
   return nums

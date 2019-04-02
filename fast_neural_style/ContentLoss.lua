@@ -1,7 +1,7 @@
-require 'torch'
-require 'nn'
+require "torch"
+require "nn"
 
-local ContentLoss, parent = torch.class('nn.ContentLoss', 'nn.Module')
+local ContentLoss, parent = torch.class("nn.ContentLoss", "nn.Module")
 
 --[[
 Module to compute content loss in-place.
@@ -22,11 +22,11 @@ function ContentLoss:__init(strength, loss_type)
   self.loss = 0
   self.target = torch.Tensor()
 
-  self.mode = 'none'
-  loss_type = loss_type or 'L2'
-  if loss_type == 'L2' then
+  self.mode = "none"
+  loss_type = loss_type or "L2"
+  if loss_type == "L2" then
     self.crit = nn.MSECriterion()
-  elseif loss_type == 'SmoothL1' then
+  elseif loss_type == "SmoothL1" then
     self.crit = nn.SmoothL1Criterion()
   else
     error(string.format('Invalid loss_type "%s"', loss_type))
@@ -34,9 +34,9 @@ function ContentLoss:__init(strength, loss_type)
 end
 
 function ContentLoss:updateOutput(input)
-  if self.mode == 'capture' then
+  if self.mode == "capture" then
     self.target:resizeAs(input):copy(input)
-  elseif self.mode == 'loss' then
+  elseif self.mode == "loss" then
     self.loss = self.strength * self.crit:forward(input, self.target)
   end
   self.output = input
@@ -44,9 +44,9 @@ function ContentLoss:updateOutput(input)
 end
 
 function ContentLoss:updateGradInput(input, gradOutput)
-  if self.mode == 'capture' or self.mode == 'none' then
+  if self.mode == "capture" or self.mode == "none" then
     self.gradInput = gradOutput
-  elseif self.mode == 'loss' then
+  elseif self.mode == "loss" then
     self.gradInput = self.crit:backward(input, self.target)
     self.gradInput:mul(self.strength)
     self.gradInput:add(gradOutput)
@@ -55,7 +55,7 @@ function ContentLoss:updateGradInput(input, gradOutput)
 end
 
 function ContentLoss:setMode(mode)
-  if mode ~= 'capture' and mode ~= 'loss' and mode ~= 'none' then
+  if mode ~= "capture" and mode ~= "loss" and mode ~= "none" then
     error(string.format('Invalid mode "%s"', mode))
   end
   self.mode = mode
