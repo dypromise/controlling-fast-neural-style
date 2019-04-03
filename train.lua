@@ -101,7 +101,9 @@ function main()
   -- Figure out the backend
   local dtype, use_cudnn = utils.setup_gpu(opt.gpu, opt.backend, opt.use_cudnn == 1)
 
+  ---------------------------------------
   -- Load style image guide if necessary
+  ---------------------------------------
   local style_image_guides = nil
   local n_guides = 0
   if opt.style_target_type == "guided_gram" then
@@ -168,7 +170,12 @@ function main()
       if opt.style_target_type == "guided_gram" then
         style_image_guides = image.scale(style_image_guides, W, H)
         style_image_guides = image.minmax {tensor = style_image_guides}
-        percep_crit:setStyleTarget({style_image:type(dtype), style_image_guides:view(1, n_guides, H, W):type(dtype)})
+        percep_crit:setStyleTarget(
+          {
+            style_image:type(dtype),
+            style_image_guides:view(1, n_guides, H, W):type(dtype)
+          }
+        )
       else
         percep_crit:setStyleTarget(style_image:type(dtype))
       end
@@ -197,23 +204,33 @@ function main()
     assert(x == params)
     grad_params:zero()
 
-    local x, y = loader:getBatch("train")
+    local x, y, g = loader:getBatch("train")
     x, y = x:type(dtype), y:type(dtype)
     target_for_display = preprocess.deprocess(y)
 
-    -- Define fixed mask as training guides
+    -- paper: Define fixed mask as training guides
+    -- TODO: Not very good...
+    -- local image_guides = nil
+    -- if opt.style_target_type == "guided_gram" then
+    --   local N, H, W = y:size(1), y:size(3), y:size(4)
+    --   local r = torch.Tensor(2)
+    --   image_guides = torch.zeros(3, 100, 100)
+    --   image_guides[{{1}, {1, 30}, {}}] = 1
+    --   image_guides[{{2}, {30, 60}, {}}] = 1
+    --   image_guides[{{3}, {60, 100}, {}}] = 1
+    --   image_guides = image.scale(image_guides:double(), W, H):type(dtype)
+    --   x = torch.cat(x, image_guides:view(1, n_guides, H, W):expand(N, n_guides, H, W), 2)
+    --   y = {y, image_guides:view(1, n_guides, H, W):expand(N, n_guides, H, W)}
+    -- end
+
+    -- Load guides from hdf5, dingy add.
     local image_guides = nil
     if opt.style_target_type == "guided_gram" then
       local N, H, W = y:size(1), y:size(3), y:size(4)
-      local r = torch.Tensor(2)
-      image_guides = torch.zeros(2, 100, 100)
-      image_guides[{{1}, {1, 50}, {}}] = 1
-      image_guides[{{2}, {50, 100}, {}}] = 1
-      image_guides = image.scale(image_guides:double(), W, H):type(dtype)
+      image_guides = image.scale(g[1]:double(), W, H):type(dtype)
       x = torch.cat(x, image_guides:view(1, n_guides, H, W):expand(N, n_guides, H, W), 2)
       y = {y, image_guides:view(1, n_guides, H, W):expand(N, n_guides, H, W)}
     end
-    --
 
     -- Run model forward
     local out = model:forward(x)
@@ -350,9 +367,11 @@ function main()
         -- Same fixed guides for testing
         if opt.style_target_type == "guided_gram" then
           local N, H, W = y:size(1), y:size(3), y:size(4)
-          image_guides = torch.zeros(2, 100, 100)
-          image_guides[{{1}, {1, 50}, {}}] = 1
-          image_guides[{{2}, {50, 100}, {}}] = 1
+          -- Channels should be num_guides!!!
+          image_guides = torch.zeros(3, 100, 100)
+          image_guides[{{1}, {1, 30}, {}}] = 1
+          image_guides[{{2}, {30, 60}, {}}] = 1
+          image_guides[{{3}, {60, 100}, {}}] = 1
           image_guides = image.scale(image_guides:double(), W, H):type(dtype)
           x = torch.cat(x, image_guides:view(1, n_guides, H, W):expand(N, n_guides, H, W), 2)
           y = {y, image_guides:view(1, n_guides, H, W):expand(N, n_guides, H, W)}
@@ -414,6 +433,7 @@ function main()
       params, grad_params = model:getParameters()
     end
 
+    -- Decaying learning rate
     if opt.lr_decay_every > 0 and t % opt.lr_decay_every == 0 then
       local new_lr = opt.lr_decay_factor * optim_state.learningRate
       optim_state = {learningRate = new_lr}

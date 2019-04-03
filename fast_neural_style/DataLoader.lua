@@ -13,15 +13,20 @@ function DataLoader:__init(opt)
   self.task = opt.task
   self.h5_file = hdf5.open(opt.h5_file, "r")
   self.batch_size = opt.batch_size
+  self.use_guide = opt.style_target_type == "guided_gram"
 
+  -- Idx
   self.split_idxs = {
     train = 1,
     val = 1
   }
 
+  -- Split
   self.image_paths = {
     train = "/train2014/images",
-    val = "/val2014/images"
+    val = "/val2014/images",
+    train_guides = "/train2014/guides",
+    val_guides = "/val2014/guides"
   }
 
   if opt.task == "upsample" then
@@ -32,6 +37,7 @@ function DataLoader:__init(opt)
     }
   end
 
+  -- Data size
   local train_size = self.h5_file:read(self.image_paths.train):dataspaceSize()
   self.split_sizes = {
     train = train_size[1],
@@ -65,7 +71,6 @@ end
 
 function DataLoader:getBatch(split)
   local path = self.image_paths[split]
-
   local start_idx = self.split_idxs[split]
   local end_idx = math.min(start_idx + self.batch_size - 1, self.split_sizes[split])
 
@@ -77,6 +82,18 @@ function DataLoader:getBatch(split)
     {1, self.image_height},
     {1, self.image_width}
   ):float():div(255)
+
+  -- Load guides out of the HDF5 file if set use_guide
+  local guides = nil
+  if self.use_guide then
+    guides =
+      self.h5_file:read(self.image_paths[split .. "_guides"]):partial(
+      {start_idx, end_idx},
+      {1, self.num_channels},
+      {1, self.image_height},
+      {1, self.image_width}
+    ):float():div(255)
+  end
 
   -- Advance counters, maybe rolling back to the start
   self.split_idxs[split] = end_idx + 1
@@ -103,6 +120,6 @@ function DataLoader:getBatch(split)
     return images_pre, y_images_pre
   elseif self.task == "style" then
     -- For style transfer just return the images twice
-    return images_pre, images_pre
+    return images_pre, images_pre, guides
   end
 end
