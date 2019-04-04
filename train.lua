@@ -50,6 +50,10 @@ cmd:option("-style_weights", "10.0")
 cmd:option("-style_layers", "4,9,14,23") --relu1_2, relu2_2, relu3_2, relu4_2
 cmd:option("-style_target_type", "gram", "gram|mean|guided_gram")
 
+-- Options for histogram layers
+cmd:option("-histogram_weights", "")
+cmd:option("-histogram_layers", "")
+
 -- Upsampling options
 cmd:option("-upsample_factor", 4)
 
@@ -90,6 +94,7 @@ function main()
   -- Parse layer strings and weights
   opt.content_layers, opt.content_weights = utils.parse_layers(opt.content_layers, opt.content_weights)
   opt.style_layers, opt.style_weights = utils.parse_layers(opt.style_layers, opt.style_weights)
+  opt.histogram_layers, opt.histogram_weights = utils.parse_layers(opt.histogram_layers, opt.histogram_weights)
 
   -- Figure out preprocessing
   if not preprocess[opt.preprocessing] then
@@ -156,6 +161,8 @@ function main()
       style_weights = opt.style_weights,
       content_layers = opt.content_layers,
       content_weights = opt.content_weights,
+      hist_layers = opt.histogram_layers,
+      hist_weights = opt.histogram_weights,
       loss_type = opt.loss_type,
       agg_type = opt.style_target_type
     }
@@ -178,6 +185,9 @@ function main()
         )
       else
         percep_crit:setStyleTarget(style_image:type(dtype))
+        if next(opt.histogram_layers) ~= nil then
+          percep_crit:setHistTarget(style_image:type(dtype))
+        end
       end
     end
   end
@@ -207,21 +217,6 @@ function main()
     local x, y, g = loader:getBatch("train")
     x, y = x:type(dtype), y:type(dtype)
     target_for_display = preprocess.deprocess(y)
-
-    -- paper: Define fixed mask as training guides
-    -- TODO: Not very good...
-    -- local image_guides = nil
-    -- if opt.style_target_type == "guided_gram" then
-    --   local N, H, W = y:size(1), y:size(3), y:size(4)
-    --   local r = torch.Tensor(2)
-    --   image_guides = torch.zeros(3, 100, 100)
-    --   image_guides[{{1}, {1, 30}, {}}] = 1
-    --   image_guides[{{2}, {30, 60}, {}}] = 1
-    --   image_guides[{{3}, {60, 100}, {}}] = 1
-    --   image_guides = image.scale(image_guides:double(), W, H):type(dtype)
-    --   x = torch.cat(x, image_guides:view(1, n_guides, H, W):expand(N, n_guides, H, W), 2)
-    --   y = {y, image_guides:view(1, n_guides, H, W):expand(N, n_guides, H, W)}
-    -- end
 
     -- Load guides from hdf5, dingy add.
     local image_guides = nil
