@@ -6,6 +6,7 @@ require "hdf5"
 
 require "fast_neural_style.DataLoader"
 require "fast_neural_style.PerceptualCriterion"
+require "fast_neural_style.DepthCriterion"
 
 local utils = require "fast_neural_style.utils"
 local preprocess = require "fast_neural_style.preprocess"
@@ -36,6 +37,7 @@ cmd:option("-loss_type", "L2", "L2|SmoothL1")
 cmd:option("-pixel_loss_type", "L1", "L2|L1|SmoothL1")
 cmd:option("-pixel_loss_weight", 0.0)
 cmd:option("-percep_loss_weight", 1.0)
+cmd:option("-depth_loss_weight", 1.0)
 cmd:option("-tv_strength", 1e-6)
 
 -- Options for feature reconstruction loss
@@ -53,6 +55,11 @@ cmd:option("-style_target_type", "gram", "gram|mean|guided_gram")
 -- Options for histogram layers
 cmd:option("-histogram_weights", "")
 cmd:option("-histogram_layers", "")
+
+-- Options for depth loss layers
+cmd:option("-depth_network", "relative-depth/results/hourglass3/AMT_from_205315_1e-4_release/Best_model_period2.t7")
+cmd:option("-depth_layers", "5")
+cmd:option("-depth_weights", "5.0")
 
 -- Upsampling options
 cmd:option("-upsample_factor", 4)
@@ -80,7 +87,7 @@ cmd:option("-backend", "cuda", "cuda|opencl")
 cmd:option("-proto_file", "models/trained/vgg19/VGG_ILSVRC_19_layers_deploy.prototxt", "Pretrained")
 cmd:option("-model_file", "models/trained/vgg19/VGG_ILSVRC_19_layers.caffemodel")
 
--- Display
+-- Website Display
 cmd:option("-display_port", 8000, "specify port to show graphs")
 
 function main()
@@ -95,6 +102,7 @@ function main()
   opt.content_layers, opt.content_weights = utils.parse_layers(opt.content_layers, opt.content_weights)
   opt.style_layers, opt.style_weights = utils.parse_layers(opt.style_layers, opt.style_weights)
   opt.histogram_layers, opt.histogram_weights = utils.parse_layers(opt.histogram_layers, opt.histogram_weights)
+  opt.depth_layers, opt.depth_weights = utils.parse_layers(opt.depth_layers, opt.depth_weights)
 
   -- Figure out preprocessing
   if not preprocess[opt.preprocessing] then
@@ -192,6 +200,19 @@ function main()
     end
   end
 
+  -- Set up the depth loss function
+  local depth_crit
+  if opt.depth_loss_weight > 0 then
+    local loss_net = torch.load(opt.depth_network) -- the model for depth_loss
+    local crit_args = {
+      cnn = loss_net,
+      depth_layers = opt.depth_layers,
+      depth_weights = opt.depth_weights
+    }
+    depth_crit = nn.DepthCriterion(crit_args):type(dtype)
+  end
+
+  -- Create dataloader
   local loader = DataLoader(opt)
   local params, grad_params = model:getParameters()
 
@@ -218,7 +239,7 @@ function main()
     x, y = x:type(dtype), y:type(dtype)
     target_for_display = preprocess.deprocess(y)
 
-    -- Load guides from hdf5, dingy add.
+    -- Load guides from hdf5, dingyang add.
     local image_guides = nil
     if opt.style_target_type == "guided_gram" then
       local N, H, W = y:size(1), y:size(3), y:size(4)
@@ -283,7 +304,22 @@ function main()
       end
     end
 
-    local loss = pixel_loss + percep_loss
+    -- Compute depth loss and gradient
+    local depth_loss = 0
+    if depth_crit then
+      local target = {content_target = y}
+      depth_loss = depth_crit:forward(out, target) -- may need to edit target
+      depth_loss = depth_loss * opt.depth_loss_weight
+      local grad_out_depth = depth_crit:backward(out, target)
+      if grad_out then
+        grad_out:add(opt.depth_loss_weight, grad_out_depth)
+      else
+        grad_out_depth:mul(opt.depth_loss_weight)
+        grad_out = grad_out_depth
+      end
+    end
+
+    local loss = pixel_loss + percep_loss + depth_loss
 
     -- Run model backward
     model:backward(x, grad_out)
@@ -300,34 +336,47 @@ function main()
   local train_loss_history = {}
   local val_loss_history = {}
   local val_loss_history_ts = {}
-  local style_loss_history = nil
-  if opt.task == "style" then
-    style_loss_history = {}
-    for i, k in ipairs(opt.style_layers) do
-      style_loss_history[string.format("style-%d", k)] = {}
-    end
-    for i, k in ipairs(opt.content_layers) do
-      style_loss_history[string.format("content-%d", k)] = {}
-    end
-  end
-  local style_weight = opt.style_weight
+  local style_loss_history = {}
+  local content_loss_history = {}
+  local depth_loss_history = {}
 
   for t = 1, opt.num_iterations do
     -- Backpropogation
     local epoch = t / loader.num_minibatches["train"]
     local _, loss = optim.adam(f, params, optim_state)
+
     table.insert(train_loss_history, {t, loss[1]})
+
+    local content_loss = 0
+    local style_loss = 0
+    local depth_loss = 0
     if opt.task == "style" then
       for i, k in ipairs(opt.style_layers) do
-        table.insert(style_loss_history[string.format("style-%d", k)], percep_crit.style_losses[i])
+        style_loss = style_loss + percep_crit.style_losses[i]
       end
       for i, k in ipairs(opt.content_layers) do
-        table.insert(style_loss_history[string.format("content-%d", k)], percep_crit.content_losses[i])
+        content_loss = content_loss + percep_crit.content_losses[i]
       end
+      for i, k in ipairs(opt.depth_layers) do
+        depth_loss = depth_loss + depth_crit.depth_losses[i]
+      end
+      table.insert(style_loss_history, {t, style_loss})
+      table.insert(content_loss_history, {t, content_loss})
+      table.insert(depth_loss_history, {t, depth_loss})
     end
 
+    -- Print
     print(
-      string.format("Epoch %f, Iteration %d / %d, loss = %f", epoch, t, opt.num_iterations, loss[1]),
+      string.format(
+        "Epoch %f, Iteration %d / %d, loss = %f, CLoss = %f, SLoss = %f, Dloss = %f",
+        epoch,
+        t,
+        opt.num_iterations,
+        loss[1],
+        content_loss,
+        style_loss,
+        depth_loss
+      ),
       optim_state.learningRate
     )
 
@@ -344,6 +393,9 @@ function main()
         display.image(target_for_display, {win = 1, width = 512, title = "Target"})
         display.image(imgs, {win = 0, width = 512, title = "Output"})
         display.plot(train_loss_history, {win = 2, labels = {"iteration", "Loss"}})
+        display.plot(content_loss_history, {win = 2, labels = {"iteration", "Content Loss"}})
+        display.plot(style_loss_history, {win = 2, labels = {"iteration", "Style Loss"}})
+        display.plot(depth_loss_history, {win = 2, labels = {"iteration", "Depth Loss"}})
       end
     end
 
@@ -400,15 +452,15 @@ function main()
 
       -- Save a JSON checkpoint
       local checkpoint = {
-        opt = opt,
-        train_loss_history = train_loss_history,
-        val_loss_history = val_loss_history,
-        val_loss_history_ts = val_loss_history_ts,
-        style_loss_history = style_loss_history
+        opt = opt
+        -- train_loss_history = train_loss_history,
+        -- val_loss_history = val_loss_history,
+        -- val_loss_history_ts = val_loss_history_ts,
+        -- style_loss_history = style_loss_history
       }
-      local filename = string.format("%s.json", opt.checkpoint_name)
-      paths.mkdir(paths.dirname(filename))
-      utils.write_json(filename, checkpoint)
+      -- local filename = string.format("%s.json", opt.checkpoint_name)
+      -- paths.mkdir(paths.dirname(filename))
+      -- utils.write_json(filename, checkpoint)
 
       -- Save a torch checkpoint; convert the model to float first
       model:clearState()

@@ -8,12 +8,14 @@ time th train.lua \
     -style_image_size 512 \
     -style_weights 10 \
     -style_target_type gram \
-    -num_iterations 60000 \
-    -lr_decay_every 3000 \
+    -num_iterations 40000 \
+    -learning_rate 0.001 \
+    -lr_decay_every 4000 \
     -lr_decay_factor 0.8 \
     -batch_size 1 \
     -gpu 0 \
     -display_port 8887 \
-    -histogram_layers "4,23" \
-    -histogram_weights 1.0 \
-#    -style_image_guides ~/pt_test/hd2_guides.hdf5
+    -depth_weights 5 \
+#    -style_image_guides ~/pt_test/hd_ori_guide.hdf5
+#    -histogram_layers "4,23" \
+#    -histogram_weights 1.0 \
